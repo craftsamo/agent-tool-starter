@@ -18,7 +18,7 @@ const OPTIONS = {
 describe("editSpots", () => {
   test("renames author and author-url in plugin manifests", () => {
     const manifest = `{\n  "author": {\n    "name": "craftsamo",\n    "url": "https://github.com/craftsamo"\n  },\n  "dep": "@craftsamo/repo-kit"\n}\n`
-    const { text, count } = editSpots("plugin.json", manifest, OPTIONS)
+    const { text, count } = editSpots(".codex-plugin/plugin.json", manifest, OPTIONS)
     expect(count).toBe(1)
     expect(JSON.parse(text)).toEqual({
       author: { name: 'A "B"', url: "https://example.test/author" },
@@ -85,8 +85,8 @@ describe("resetVersion", () => {
   })
 
   test("leaves other files alone and refuses a manifest without a version", () => {
-    expect(resetVersion("mcp.json", `{\n  "version": "1"\n}\n`).count).toBe(0)
-    expect(() => resetVersion("plugin.json", "{}\n")).toThrow(SetupError)
+    expect(resetVersion(".mcp.json", `{\n  "version": "1"\n}\n`).count).toBe(0)
+    expect(() => resetVersion(".codex-plugin/plugin.json", "{}\n")).toThrow(SetupError)
   })
 })
 
