@@ -12,4 +12,6 @@ export const PROJECT = {
   toolsets: ["notes"] as readonly string[],
   /** The toolsets on when a setting names none. */
   defaultToolsets: ["notes"] as readonly string[],
+  /** The environment variables the tools read besides the settings, which Codex forwards to the server after them. */
+  toolVariables: [] as readonly string[],
 } as const
