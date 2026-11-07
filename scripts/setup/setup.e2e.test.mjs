@@ -104,6 +104,9 @@ describe("the setup on a clone of the starter", () => {
     expect(pkg.version).toBe("0.0.0")
     expect(read(dir, "plugin.yaml")).toContain("\nversion: 0.0.0\n")
     expect(readJson(dir, ".claude-plugin/plugin.json").version).toBe("0.0.0")
+    expect(readJson(dir, ".codex-plugin/plugin.json").mcpServers["widget-tools"].env_vars).toContain(
+      "WIDGET_TOOLS_TOOLSETS",
+    )
     expect(pkg.description).toBe("Widget tools for agents.")
     expect(pkg).not.toHaveProperty("private")
     expect(pkg.scripts).not.toHaveProperty("setup")
@@ -123,7 +126,7 @@ describe("the setup on a clone of the starter", () => {
     expect(read(dir, "LICENSE")).toContain("Copyright (c) 2026 acme")
     expect(read(dir, "README.md")).not.toContain("Using this starter")
     expect(read(dir, STARTER_REFERENCE)).toContain('"repository": "craftsamo/agent-tool-starter"')
-    expect(readJson(dir, "plugin.json").author).toEqual({ name: "acme", url: "https://github.com/acme" })
+    expect(readJson(dir, ".codex-plugin/plugin.json").author).toEqual({ name: "acme", url: "https://github.com/acme" })
     expect(readJson(dir, ".claude-plugin/plugin.json").author).toEqual({ name: "acme", url: "https://github.com/acme" })
     expect(readJson(dir, ".antigravity-plugin/plugin.json").author).toEqual({
       name: "acme",
@@ -164,7 +167,10 @@ describe("the setup on a clone of the starter", () => {
     expect(result.status).toBe(0)
 
     expectNoLeftovers(dir)
-    expect(readJson(dir, "plugin.json").author).toEqual({ name: "acme", url: "https://github.com/someone" })
+    expect(readJson(dir, ".codex-plugin/plugin.json").author).toEqual({
+      name: "acme",
+      url: "https://github.com/someone",
+    })
     expect(readJson(dir, ".claude-plugin/marketplace.json").owner).toEqual({
       name: "Acme Inc",
       url: "https://github.com/acme",

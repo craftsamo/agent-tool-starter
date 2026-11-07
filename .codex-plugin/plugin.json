@@ -1,5 +1,4 @@
 {
-  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "agent-tool-starter",
   "version": "0.2.0",
   "description": "A starter for tool packages that coding agents call: one implementation delivered to every harness.",
@@ -9,5 +8,20 @@
   },
   "homepage": "https://github.com/craftsamo/agent-tool-starter#readme",
   "repository": "https://github.com/craftsamo/agent-tool-starter",
-  "license": "MIT"
+  "license": "MIT",
+  "skills": "./skills",
+  "mcpServers": {
+    "agent-tool-starter": {
+      "command": "node",
+      "args": ["dist/mcp.js"],
+      "cwd": ".",
+      "env_vars": [
+        "AGENT_TOOL_STARTER_TOOLSETS",
+        "AGENT_TOOL_STARTER_READ_ONLY",
+        "AGENT_TOOL_STARTER_TOOLS",
+        "AGENT_TOOL_STARTER_EXCLUDE_TOOLS",
+        "AGENT_TOOL_STARTER_CONFIRM"
+      ]
+    }
+  }
 }

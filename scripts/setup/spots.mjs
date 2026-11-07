@@ -32,7 +32,7 @@ const marketplaceName = [/^(  "name": )"craftsamo"/gm, (o, key) => `${key}${json
  * `craftsamo/repo-kit` workflows, which stay.
  */
 const SPOTS = {
-  "plugin.json": [authorPerson],
+  ".codex-plugin/plugin.json": [authorPerson],
   ".claude-plugin/plugin.json": [authorPerson],
   ".antigravity-plugin/plugin.json": [authorPerson],
   ".claude-plugin/marketplace.json": [
