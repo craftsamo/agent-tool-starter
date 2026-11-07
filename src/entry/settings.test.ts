@@ -1,26 +1,17 @@
 import { describe, expect, test } from "bun:test"
 import { PROJECT } from "../project"
 import type { EntryProfile } from "./profile"
-import { parseSettings, parseToolSettings, settingVariables } from "./settings"
+import { parseSettings, parseToolSettings, SETTING_VARIABLES } from "./settings"
 import { failure, profile } from "./settings.testing"
 
 const parse = (argv: string[], env: Record<string, string | undefined> = {}) => parseSettings(argv, env, profile)
 const parseTool = (argv: string[], env: Record<string, string | undefined> = {}) =>
   parseToolSettings(argv, env, profile)
 
-describe("settingVariables", () => {
-  test("names each setting's variable under the profile's prefix", () => {
-    expect(settingVariables(profile)).toEqual([
-      "DEMO_TOOLSETS",
-      "DEMO_READ_ONLY",
-      "DEMO_TOOLS",
-      "DEMO_EXCLUDE_TOOLS",
-      "DEMO_CONFIRM",
-    ])
-  })
-
-  test("uses the package's own prefix by default", () => {
-    expect(settingVariables()).toEqual(settingVariables({ ...profile, envPrefix: PROJECT.envPrefix }))
+describe("SETTING_VARIABLES", () => {
+  test("names each setting's variable under the package's prefix", () => {
+    const suffixes = ["TOOLSETS", "READ_ONLY", "TOOLS", "EXCLUDE_TOOLS", "CONFIRM"]
+    expect(SETTING_VARIABLES).toEqual(suffixes.map((suffix) => `${PROJECT.envPrefix}_${suffix}`))
   })
 })
 

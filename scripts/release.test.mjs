@@ -4,7 +4,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { settingVariables } from "../src/entry/settings"
+import { SETTING_VARIABLES } from "../src/entry/settings"
 import { PROJECT } from "../src/project"
 import { PLUGIN_NAME } from "./package-name.mjs"
 import { DESCRIPTION_LIMIT, serverJson } from "./server-json.mjs"
@@ -14,8 +14,18 @@ const ROOT = fileURLToPath(new URL("../", import.meta.url))
 const MCP_ENTRY = "dist/mcp.js"
 const CLI_ENTRY = "dist/cli.js"
 
-/** The legacy manifest Codex loads the plugin from, which names the server relative to the plugin root. */
+/**
+ * Codex's own manifest. Codex expands no root variable there, so the server
+ * starts in the plugin root (a relative `cwd` is resolved against it), and
+ * Codex forwards only the variables `env_vars` names.
+ */
 const CODEX_MANIFEST = ".codex-plugin/plugin.json"
+
+/**
+ * Codex loads a root `plugin.json` with an agent-plugins.org `$schema` as an
+ * Agent Plugin, whose tools it hides once their specs pass a fixed byte budget.
+ */
+const AGENT_PLUGIN_FILES = ["plugin.json", "mcp.json"]
 
 /** Each MCP configuration and the variable its harness expands to the plugin's install directory. */
 const MCP_CONFIGS = {
@@ -80,19 +90,14 @@ describe("MCP configurations", () => {
     })
   })
 
-  test("Codex's legacy manifest launches dist/mcp.js from the plugin root and forwards every setting variable", () => {
-    const manifest = readJson(CODEX_MANIFEST)
-    expect(manifest.mcpServers).toEqual({
-      [SERVER_NAME]: { command: "node", args: [MCP_ENTRY], cwd: ".", env_vars: settingVariables() },
+  test(`${CODEX_MANIFEST} launches ${MCP_ENTRY} from the plugin root and forwards every setting`, () => {
+    expect(readJson(CODEX_MANIFEST).mcpServers).toEqual({
+      [SERVER_NAME]: { command: "node", args: [MCP_ENTRY], cwd: ".", env_vars: [...SETTING_VARIABLES] },
     })
-    expect(manifest.skills).toBe("./skills")
   })
 
-  // Codex reads a root plugin.json with an agent-plugins.org $schema first and
-  // then applies the Agent Plugin tool budget to the plugin.
-  test("no root manifest makes Codex load the plugin as an Agent Plugin", () => {
-    expect(existsSync(join(ROOT, "plugin.json"))).toBe(false)
-    expect(existsSync(join(ROOT, "mcp.json"))).toBe(false)
+  test.each(AGENT_PLUGIN_FILES)("there is no root %s, which would make Codex load an Agent Plugin", (file) => {
+    expect(existsSync(join(ROOT, file))).toBe(false)
   })
 
   test("every MCP configuration declares exactly one server and all use the same name", () => {
