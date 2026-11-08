@@ -25,6 +25,7 @@ export const exampleNoteCreate = defineTool({
   class: "add",
   targets: (args, ctx) => [notePath(ctx.cwd, args.name)],
   describe: (args) => ({
+    headline: { text: "Create the note {name}", values: { name: args.name } },
     facts: [sizeFact(Buffer.byteLength(args.text, "utf8"))],
     text: { label: "Note text", body: args.text },
   }),
