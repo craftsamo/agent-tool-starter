@@ -81,26 +81,18 @@ describe("exampleNoteCreate: targets", () => {
 })
 
 describe("exampleNoteCreate: description", () => {
-  test("callDescription gives the note path, size in bytes, and text", async () => {
+  test("callDescription gives the size in bytes and the text under its label", async () => {
     const text = "Café"
     const description = await callDescription(exampleNoteCreate, { name: "described-note", text }, { cwd: workDir })
     expect(description).toEqual({
-      facts: [
-        { label: "Note", value: "notes/described-note.md" },
-        { label: "Size", value: "5 bytes" },
-      ],
-      text,
+      facts: [{ label: "Size", value: "5 bytes" }],
+      text: { label: "Note text", body: text },
     })
   })
 
   test("callDescription gives only facts for empty text", async () => {
     const description = await callDescription(exampleNoteCreate, { name: "empty-note", text: "" }, { cwd: workDir })
-    expect(description).toEqual({
-      facts: [
-        { label: "Note", value: "notes/empty-note.md" },
-        { label: "Size", value: "0 bytes" },
-      ],
-    })
+    expect(description).toEqual({ facts: [{ label: "Size", value: "0 bytes" }] })
   })
 
   test("callDescription yields undefined for invalid arguments", async () => {
