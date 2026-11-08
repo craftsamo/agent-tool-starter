@@ -23,6 +23,13 @@ export const exampleNoteCreate = defineTool({
   toolset: "notes",
   class: "add",
   targets: (args, ctx) => [notePath(ctx.cwd, args.name)],
+  describe: (args) => ({
+    facts: [
+      { label: "Note", value: `${NOTES_DIR}/${args.name}.md` },
+      { label: "Size", value: `${Buffer.byteLength(args.text, "utf8")} bytes` },
+    ],
+    text: args.text,
+  }),
   input,
   output,
   async execute(args, ctx) {
