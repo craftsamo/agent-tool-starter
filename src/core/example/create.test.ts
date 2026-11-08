@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { mkdtemp, readFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { callDescription } from "../describe"
 import { ToolError } from "../errors"
 import { writeTargets } from "../targets"
 import { annotations, invoke } from "../tool"
@@ -76,6 +77,35 @@ describe("exampleNoteCreate: targets", () => {
   test("writeTargets yields * for invalid arguments", async () => {
     const targets = await writeTargets(exampleNoteCreate, { name: "Invalid_Name", text: "content" }, { cwd: workDir })
     expect(targets).toEqual(["*"])
+  })
+})
+
+describe("exampleNoteCreate: description", () => {
+  test("callDescription names the note, gives the size in bytes and the text under its label", async () => {
+    const text = "Café"
+    const description = await callDescription(exampleNoteCreate, { name: "described-note", text }, { cwd: workDir })
+    expect(description).toEqual({
+      headline: { text: "Create the note {name}", values: { name: "described-note" } },
+      facts: [{ label: "Size", value: "5 bytes" }],
+      text: { label: "Note text", body: text },
+    })
+  })
+
+  test("callDescription gives no text section for empty text", async () => {
+    const description = await callDescription(exampleNoteCreate, { name: "empty-note", text: "" }, { cwd: workDir })
+    expect(description).toEqual({
+      headline: { text: "Create the note {name}", values: { name: "empty-note" } },
+      facts: [{ label: "Size", value: "0 bytes" }],
+    })
+  })
+
+  test("callDescription yields undefined for invalid arguments", async () => {
+    const description = await callDescription(
+      exampleNoteCreate,
+      { name: "Invalid_Name", text: "content" },
+      { cwd: workDir },
+    )
+    expect(description).toBeUndefined()
   })
 })
 

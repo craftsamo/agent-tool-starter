@@ -1,4 +1,5 @@
 import { invoke, isToolError, selectTools, type ToolContext, type ToolSpec } from "../core"
+import { approvalPrompt, type ShownDescription } from "../entry/description"
 import { errorText } from "../entry/errors"
 import { ANY_RESOURCE } from "../entry/permission"
 import { PROJECT_PROFILE, type EntryProfile } from "../entry/profile"
@@ -17,21 +18,23 @@ export type PluginDeps = {
   ownDir?: string
 }
 
-/** The one plain line a person reads when the harness asks to run a tool; it names everything the call writes to. */
-export function permissionMessage(spec: Pick<ToolSpec, "title">, resources: string[]): string {
-  return resources.length === 1 && resources[0] === ANY_RESOURCE
-    ? spec.title
-    : `${spec.title} on ${resources.join(", ")}`
-}
-
 /** The resources an "always" answer may persist: all but `*`, which would grant every target. */
 export function persistableResources(resources: string[]): string[] {
   return resources.filter((resource) => resource !== ANY_RESOURCE)
 }
 
 /** What the harness is told about a call it is asked to allow. */
-export function permissionMetadata(spec: Pick<ToolSpec, "title" | "class">, args: unknown, resources: string[]) {
-  return { arguments: args, class: spec.class, message: permissionMessage(spec, resources) }
+export function permissionMetadata(
+  spec: Pick<ToolSpec, "title" | "class">,
+  args: unknown,
+  resources: string[],
+  description?: ShownDescription,
+) {
+  return {
+    arguments: args,
+    class: spec.class,
+    message: approvalPrompt(spec.title, resources, description),
+  }
 }
 
 /** Whether a call must be allowed by the harness first: every tool but a read tool. */

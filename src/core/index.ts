@@ -13,6 +13,10 @@ export {
   outputJsonSchema,
   selectTools,
   toolMeta,
+  type CallDescription,
+  type CallFact,
+  type CallHeadline,
+  type CallText,
   type ConfirmRequest,
   type ToolAnnotations,
   type ToolContext,
@@ -21,3 +25,5 @@ export {
   type Toolsets,
   type WriteClass,
 } from "./tool"
+export { HEADLINE_PLACEHOLDER, callDescription } from "./describe"
+export { sizeFact } from "./facts"

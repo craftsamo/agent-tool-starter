@@ -8,12 +8,22 @@ import unittest
 from typing import Any
 from unittest import mock
 
-from support import CWD, FAKE_CLI, LISTING, FakeCliCase, approval, listing, project, runtime
+from support import CWD, FAKE_CLI, LISTING, FakeCliCase, StubContext, approval, listing, project, runtime
+
+
+CREATE = "Create a thing"
+UPDATE = "Update a widget"
+DETAILS = "\n\n--- Details ---\n\n"
 
 
 def key(tool_id: str, *resources: str) -> str:
     """The rule_key of a call of ``tool_id`` that names ``resources``."""
     return f"{project.PLUGIN_NAME}:{tool_id}:{json.dumps(list(resources), separators=(',', ':'))}"
+
+
+class SurfaceContext(StubContext):
+    def session_surface(self) -> str:
+        return "cli"
 
 
 class ApprovalHookTest(FakeCliCase):
@@ -30,7 +40,7 @@ class ApprovalHookTest(FakeCliCase):
             decision,
             {
                 "action": "approve",
-                "message": "Create a thing on target/one (demo_thing_create)",
+                "message": f"{CREATE}{DETAILS}Target: target/one",
                 "rule_key": key("demo_thing_create", "target/one"),
             },
         )
@@ -44,6 +54,189 @@ class ApprovalHookTest(FakeCliCase):
             with self.subTest(tool=tool_id):
                 self.assertEqual(self.hook()(tool_name=tool_id, args={})["action"], "approve")
 
+    def test_a_description_without_a_surface_uses_the_strictest_card(self) -> None:
+        self.reply(
+            "target demo_thing_create",
+            stdout=json.dumps(
+                {
+                    "resources": ["target/one"],
+                    "description": {
+                        "headline": 'Create the thing "a_b"',
+                        "facts": [{"label": "Kind", "value": "group_chat"}],
+                        "text": {"label": "Note", "body": "hi @everyone"},
+                    },
+                }
+            ),
+        )
+        decision = self.hook()(tool_name="demo_thing_create", args={})
+        self.assertEqual(
+            decision,
+            {
+                "action": "approve",
+                "message": 'Create the thing "a\\_b"'
+                f"{DETAILS}Target: target/one\nKind: group\\_chat\n\n--- Note ---\n\nhi \\@everyone",
+                "rule_key": key("demo_thing_create", "target/one"),
+            },
+        )
+        self.assertEqual(len(self.target_calls()), 1)
+
+    def test_a_description_is_fitted_to_the_session_surface(self) -> None:
+        self.reply(
+            "target demo_thing_create",
+            stdout=json.dumps(
+                {
+                    "resources": ["target/one"],
+                    "description": {
+                        "facts": [{"label": "Kind", "value": "group_chat"}],
+                        "text": {"label": "Note", "body": "hi <@everyone> & all"},
+                    },
+                }
+            ),
+        )
+        for surface, text in (("cli", "hi <@everyone> & all"), ("slack", "hi &lt;@everyone&gt; &amp; all")):
+            with self.subTest(surface=surface), mock.patch.object(SurfaceContext, "session_surface", return_value=surface):
+                ctx = self.register(ctx=SurfaceContext())
+                decision = ctx.hooks[0][1](tool_name="demo_thing_create", args={})
+                self.assertEqual(
+                    decision["message"],
+                    f"{CREATE}{DETAILS}Target: target/one\nKind: group_chat\n\n--- Note ---\n\n{text}",
+                )
+                self.assertEqual(decision["rule_key"], key("demo_thing_create", "target/one"))
+
+    def test_an_unavailable_surface_still_approves_with_the_strictest_card(self) -> None:
+        self.reply(
+            "target demo_thing_create",
+            stdout=json.dumps(
+                {
+                    "resources": ["target/one"],
+                    "description": {"facts": [], "text": {"label": "Note", "body": "hi <@everyone> & all"}},
+                }
+            ),
+        )
+        for fields in (
+            {"side_effect": RuntimeError("unavailable")},
+            {"return_value": None},
+            {"return_value": 3},
+            {"return_value": ""},
+        ):
+            with self.subTest(fields=fields), mock.patch.object(SurfaceContext, "session_surface", **fields):
+                ctx = self.register(ctx=SurfaceContext())
+                decision = ctx.hooks[0][1](tool_name="demo_thing_create", args={})
+                self.assertEqual(decision["action"], "approve")
+                self.assertEqual(
+                    decision["message"],
+                    f"{CREATE}{DETAILS}Target: target/one\n\n--- Note ---\n\nhi &lt;\\@everyone&gt; &amp; all",
+                )
+
+    def test_the_surface_is_read_even_without_a_description(self) -> None:
+        self.reply("target demo_thing_create", stdout='{"resources":["target/one"]}')
+        with mock.patch.object(SurfaceContext, "session_surface", return_value="slack") as surface:
+            ctx = self.register(ctx=SurfaceContext())
+            decision = ctx.hooks[0][1](tool_name="demo_thing_create", args={})
+            self.assertEqual(decision["message"], f"{CREATE}{DETAILS}Target: target/one")
+            surface.assert_called_once_with()
+
+    def test_a_bad_description_preserves_the_message_and_resources(self) -> None:
+        for description in (
+            "x",
+            {"facts": "x"},
+            {"facts": [{"label": "", "value": "v"}]},
+            {"facts": [], "text": 5},
+            {"facts": [{"label": "a", "value": "b"}], "text": {"label": "Note"}},
+        ):
+            self.reply(
+                "target demo_thing_create", stdout=json.dumps({"resources": ["target/one"], "description": description})
+            )
+            with self.subTest(description=description):
+                decision = self.hook()(tool_name="demo_thing_create", args={})
+                self.assertEqual(decision["message"], f"{CREATE}{DETAILS}Target: target/one")
+                self.assertEqual(decision["rule_key"], key("demo_thing_create", "target/one"))
+
+    def test_a_description_with_unresolved_resources_keeps_the_single_use_key(self) -> None:
+        self.reply(
+            "target demo_widget_update",
+            stdout=json.dumps(
+                {"resources": ["*"], "description": {"facts": [], "text": {"label": "Note", "body": "hi @everyone"}}}
+            ),
+        )
+        decision = self.assert_single_use("demo_widget_update", key("demo_widget_update", "*"), args={})
+        self.assertEqual(decision["message"], f"{UPDATE}\n\n--- Note ---\n\nhi \\@everyone")
+
+    def test_control_characters_in_a_description_are_marked(self) -> None:
+        self.reply(
+            "target demo_thing_create",
+            stdout=json.dumps(
+                {"resources": ["target/one"], "description": {"facts": [{"label": "Name", "value": "a\u202eb"}]}}
+            ),
+        )
+        ctx = self.register(ctx=SurfaceContext())
+        decision = ctx.hooks[0][1](tool_name="demo_thing_create", args={})
+        self.assertEqual(decision["message"], f"{CREATE}{DETAILS}Target: target/one\nName: a<U+202E>b")
+
+    def test_invalid_resources_do_not_discard_a_description(self) -> None:
+        self.reply(
+            "target demo_widget_update",
+            stdout=json.dumps(
+                {"resources": [], "description": {"facts": [], "text": {"label": "Note", "body": "hi"}}}
+            ),
+        )
+        decision = self.assert_single_use("demo_widget_update", key("demo_widget_update", "*"), args={})
+        self.assertEqual(decision["message"], f"{UPDATE}\n\n--- Note ---\n\nhi")
+
+    def test_a_failed_target_does_not_show_its_description(self) -> None:
+        self.reply(
+            "target demo_widget_update",
+            code=1,
+            stdout=json.dumps(
+                {"resources": ["target/one"], "description": {"facts": [], "text": {"label": "Note", "body": "hi"}}}
+            ),
+        )
+        decision = self.assert_single_use("demo_widget_update", key("demo_widget_update", "*"), args={})
+        self.assertEqual(decision["message"], UPDATE)
+
+    def test_a_card_that_cannot_be_built_still_asks_with_the_card_without_a_description(self) -> None:
+        self.reply(
+            "target demo_thing_create",
+            stdout=json.dumps(
+                {"resources": ["target/one"], "description": {"facts": [], "text": {"label": "Note", "body": "hi"}}}
+            ),
+        )
+        hook = self.hook()
+        build = approval.card.build_message
+        built: list[Any] = []
+
+        def failing_with_a_description(title: str, resources: list[str], description: Any, surface: Any) -> str:
+            built.append((description is None, surface))
+            if description is not None:
+                raise RuntimeError("boom")
+            return build(title, resources, description, surface)
+
+        with mock.patch.object(approval.card, "build_message", side_effect=failing_with_a_description):
+            decision = hook(tool_name="demo_thing_create", args={})
+        self.assertEqual(
+            decision,
+            {
+                "action": "approve",
+                "message": f"{CREATE}{DETAILS}Target: target/one",
+                "rule_key": key("demo_thing_create", "target/one"),
+            },
+        )
+        self.assertEqual(built, [(False, None), (True, None)])
+
+    def test_a_card_that_cannot_be_built_at_all_still_asks_with_the_title(self) -> None:
+        self.reply("target demo_thing_create", stdout='{"resources":["target/one"]}')
+        hook = self.hook()
+        with mock.patch.object(approval.card, "build_message", side_effect=RuntimeError("boom")):
+            decision = hook(tool_name="demo_thing_create", args={})
+        self.assertEqual(
+            decision,
+            {
+                "action": "approve",
+                "message": CREATE,
+                "rule_key": key("demo_thing_create", "target/one"),
+            },
+        )
+
     def test_a_read_is_left_alone_without_asking_the_cli(self) -> None:
         self.assertIsNone(self.hook()(tool_name="demo_thing_read", args={}))
         self.assertEqual(self.target_calls(), [])
@@ -55,7 +248,7 @@ class ApprovalHookTest(FakeCliCase):
     def test_every_resource_a_write_names_is_in_the_message_and_the_rule_key(self) -> None:
         self.reply("target demo_thing_create", stdout='{"resources":["target/one","target/two"]}')
         decision = self.hook()(tool_name="demo_thing_create", args={"target": "target/two", "body": "hi"})
-        self.assertEqual(decision["message"], "Create a thing on target/one, target/two (demo_thing_create)")
+        self.assertEqual(decision["message"], f"{CREATE}{DETAILS}Target: target/one\nTarget: target/two")
         self.assertEqual(decision["rule_key"], key("demo_thing_create", "target/one", "target/two"))
 
     def test_resources_with_a_comma_never_share_a_rule_key_with_a_longer_list(self) -> None:
@@ -79,12 +272,12 @@ class ApprovalHookTest(FakeCliCase):
     def test_an_unresolved_target_is_any_resource_and_leaves_nothing_to_reuse(self) -> None:
         self.reply("target demo_widget_update", stdout='{"resources":["*"]}')
         decision = self.assert_single_use("demo_widget_update", key("demo_widget_update", "*"), args={})
-        self.assertEqual(decision["message"], "Update a widget (demo_widget_update)")
+        self.assertEqual(decision["message"], UPDATE)
 
     def test_a_resource_that_cannot_be_told_stays_beside_the_others_and_leaves_nothing_to_reuse(self) -> None:
         self.reply("target demo_widget_update", stdout='{"resources":["target/one","*"]}')
         decision = self.assert_single_use("demo_widget_update", key("demo_widget_update", "target/one", "*"), args={})
-        self.assertEqual(decision["message"], "Update a widget on target/one, * (demo_widget_update)")
+        self.assertEqual(decision["message"], f"{UPDATE}{DETAILS}Target: target/one\nTarget: \\*")
 
     def test_a_rule_key_that_names_only_known_resources_is_stable(self) -> None:
         self.reply("target demo_thing_create", stdout='{"resources":["target/one"]}')

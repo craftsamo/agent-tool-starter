@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { z } from "zod"
 import { ToolError } from "../errors"
+import { sizeFact } from "../facts"
 import { defineTool } from "../tool"
 import { assertCallerTree, noteName, notePath, NOTES_DIR } from "./notes"
 
@@ -23,6 +24,11 @@ export const exampleNoteCreate = defineTool({
   toolset: "notes",
   class: "add",
   targets: (args, ctx) => [notePath(ctx.cwd, args.name)],
+  describe: (args) => ({
+    headline: { text: "Create the note {name}", values: { name: args.name } },
+    facts: [sizeFact(Buffer.byteLength(args.text, "utf8"))],
+    text: { label: "Note text", body: args.text },
+  }),
   input,
   output,
   async execute(args, ctx) {
