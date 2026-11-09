@@ -86,7 +86,7 @@ describe("exampleNoteCreate: description", () => {
     const description = await callDescription(exampleNoteCreate, { name: "described-note", text }, { cwd: workDir })
     expect(description).toEqual({
       headline: { text: "Create the note {name}", values: { name: "described-note" } },
-      facts: [{ label: "Size", value: "5 bytes" }],
+      facts: [{ label: "Size", value: { text: "{bytes} bytes", values: { bytes: 5 } } }],
       text: { label: "Note text", body: text },
     })
   })
@@ -95,7 +95,7 @@ describe("exampleNoteCreate: description", () => {
     const description = await callDescription(exampleNoteCreate, { name: "empty-note", text: "" }, { cwd: workDir })
     expect(description).toEqual({
       headline: { text: "Create the note {name}", values: { name: "empty-note" } },
-      facts: [{ label: "Size", value: "0 bytes" }],
+      facts: [{ label: "Size", value: { text: "{bytes} bytes", values: { bytes: 0 } } }],
     })
   })
 
