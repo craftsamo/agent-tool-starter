@@ -32,6 +32,12 @@ async function thrown(promise: Promise<unknown>): Promise<ToolError> {
   }
 }
 
+describe("exampleNoteCreate: intent", () => {
+  test("states what the agent is about to do, without values", () => {
+    expect(exampleNoteCreate.intent).toBe("About to create a note")
+  })
+})
+
 describe("exampleNoteCreate: annotations", () => {
   test("publishes add class annotations", () => {
     expect(annotations(exampleNoteCreate)).toEqual({
@@ -85,7 +91,7 @@ describe("exampleNoteCreate: description", () => {
     const text = "Café"
     const description = await callDescription(exampleNoteCreate, { name: "described-note", text }, { cwd: workDir })
     expect(description).toEqual({
-      headline: { text: "Create the note {name}", values: { name: "described-note" } },
+      headline: { text: "About to create {file}", values: { file: "described-note.md" } },
       facts: [{ label: "Size", value: { text: "{bytes} bytes", values: { bytes: 5 } } }],
       text: { label: "Note text", body: text },
     })
@@ -94,7 +100,7 @@ describe("exampleNoteCreate: description", () => {
   test("callDescription gives no text section for empty text", async () => {
     const description = await callDescription(exampleNoteCreate, { name: "empty-note", text: "" }, { cwd: workDir })
     expect(description).toEqual({
-      headline: { text: "Create the note {name}", values: { name: "empty-note" } },
+      headline: { text: "About to create {file}", values: { file: "empty-note.md" } },
       facts: [{ label: "Size", value: { text: "{bytes} bytes", values: { bytes: 0 } } }],
     })
   })
