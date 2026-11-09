@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import json
 import re
+import sys
+import types
 import unittest
+from pathlib import Path
 from typing import Any
 from unittest import mock
 
@@ -205,11 +208,13 @@ class ApprovalHookTest(FakeCliCase):
         build = approval.card.build_message
         built: list[Any] = []
 
-        def failing_with_a_description(title: str, resources: list[str], description: Any, surface: Any) -> str:
+        def failing_with_a_description(
+            title: str, resources: list[str], description: Any, surface: Any, words: Any
+        ) -> str:
             built.append((description is None, surface))
             if description is not None:
                 raise RuntimeError("boom")
-            return build(title, resources, description, surface)
+            return build(title, resources, description, surface, words)
 
         with mock.patch.object(approval.card, "build_message", side_effect=failing_with_a_description):
             decision = hook(tool_name="demo_thing_create", args={})
@@ -322,6 +327,237 @@ class ApprovalHookTest(FakeCliCase):
         self.reply("target demo_widget_update", stdout='{"resources":["target/one"]}')
         with mock.patch.dict("os.environ", {"HERMES_CRON": "1", "HERMES_YOLO_MODE": "1"}):
             self.assertEqual(self.hook()(tool_name="demo_widget_update", args={})["action"], "approve")
+
+
+class ApprovalLanguageTest(FakeCliCase):
+    def target_calls(self) -> list[dict[str, Any]]:
+        return [call for call in self.calls() if call["argv"][0] == "target"]
+
+    def target_argv(self) -> list[str]:
+        [call] = self.target_calls()
+        return call["argv"]
+
+    def ask(self, config: dict[str, Any] | None = None, display: Any = None) -> tuple[dict[str, str], list[str]]:
+        """The decision of one call and the argv ``target`` ran with, the display language being ``display``."""
+        self.reply("target demo_thing_create", stdout='{"resources":["target/one"]}')
+        with mock.patch.object(approval, "display_language", **display or {"return_value": None}):
+            hook = self.register(config).hooks[0][1]
+            decision = hook(tool_name="demo_thing_create", args={})
+        return decision, self.target_argv()
+
+    def test_the_setting_and_the_display_language_become_flags_in_a_stable_order(self) -> None:
+        base = ["target", "demo_thing_create", "--cwd", CWD]
+        for config, display, flags in (
+            ({}, None, []),
+            ({"language": "ja"}, None, ["--language=ja"]),
+            ({}, "fr", ["--harness-language=fr"]),
+            ({"language": " de "}, "fr", ["--language=de", "--harness-language=fr"]),
+            ({"language": "  "}, " fr ", ["--harness-language=fr"]),
+            ({"language": 3}, None, []),
+            ({"language": "--tools"}, None, ["--language=--tools"]),
+        ):
+            with self.subTest(config=config, display=display):
+                self.log.unlink(missing_ok=True)
+                _, argv = self.ask(config, {"return_value": display})
+                self.assertEqual(argv, [*base, *flags])
+
+    def test_the_display_language_is_read_on_every_call(self) -> None:
+        self.reply("target demo_thing_create", stdout='{"resources":["target/one"]}')
+        hook = self.register().hooks[0][1]
+        for display in ("ja", "fr"):
+            with mock.patch.object(approval, "display_language", return_value=display):
+                hook(tool_name="demo_thing_create", args={})
+        argvs = [call["argv"] for call in self.target_calls()]
+        self.assertEqual([argv[4:] for argv in argvs], [["--harness-language=ja"], ["--harness-language=fr"]])
+
+    def test_a_display_language_that_fails_or_is_junk_gives_no_flag_and_the_card_is_built(self) -> None:
+        for fields in (
+            {"side_effect": RuntimeError("no i18n")},
+            {"return_value": None},
+            {"return_value": ""},
+            {"return_value": "   "},
+            {"return_value": 3},
+            {"return_value": ["ja"]},
+        ):
+            with self.subTest(fields=fields):
+                self.log.unlink(missing_ok=True)
+                decision, argv = self.ask({"language": "ja"}, fields)
+                self.assertEqual(argv, ["target", "demo_thing_create", "--cwd", CWD, "--language=ja"])
+                self.assertEqual(decision["message"], f"{CREATE}{DETAILS}Target: target/one")
+                self.assertEqual(decision["rule_key"], key("demo_thing_create", "target/one"))
+
+    def test_an_injected_reader_that_fails_or_is_junk_knows_nothing(self) -> None:
+        self.reply("target demo_thing_create", stdout='{"resources":["target/one"]}')
+        self.write_fixture()
+        tool = listing.ToolInfo.from_listing(LISTING[1])
+
+        def failing() -> str:
+            raise RuntimeError("boom")
+
+        for read in (failing, lambda: 3, lambda: " "):
+            with self.subTest(read=read):
+                self.log.unlink(missing_ok=True)
+                decision = approval.make_hook(self.runtime, [tool], harness_language=read)(
+                    tool_name="demo_thing_create", args={}
+                )
+                self.assertEqual(self.target_argv(), ["target", "demo_thing_create", "--cwd", CWD])
+                self.assertEqual(decision["message"], f"{CREATE}{DETAILS}Target: target/one")
+
+    def test_list_and_run_get_no_language_flag(self) -> None:
+        self.reply("run demo_thing_create", stdout='{"result":{}}')
+        with mock.patch.object(approval, "display_language", return_value="ja"):
+            ctx = self.register({"language": "ja"})
+            ctx.tools["demo_thing_create"]["handler"]({"target": "target/one"})
+        for call in self.calls():
+            if call["argv"][0] in ("list", "run"):
+                with self.subTest(argv=call["argv"]):
+                    self.assertFalse(any(arg.startswith("--language") for arg in call["argv"]))
+                    self.assertFalse(any(arg.startswith("--harness-language") for arg in call["argv"]))
+
+
+JAPANESE_WORDS = {"details": "詳細", "target": "対象", "more": "（ほか {count} 件）"}
+
+
+class ApprovalWordsTest(FakeCliCase):
+    def answer(self, **fields: Any) -> dict[str, Any]:
+        """The decision for a call whose ``target`` answers its resources and description with ``fields`` added."""
+        description = {"facts": [{"label": "サイズ", "value": "1 byte"}], "text": {"label": "メモの本文", "body": "x"}}
+        document = {"resources": ["target/one"], "description": description, **fields}
+        self.reply("target demo_thing_create", stdout=json.dumps(document, ensure_ascii=False))
+        ctx = self.register(ctx=SurfaceContext())
+        return ctx.hooks[0][1](tool_name="demo_thing_create", args={})
+
+    def test_the_title_and_the_words_of_the_answer_draw_the_card(self) -> None:
+        decision = self.answer(title="メモを作成する", words=JAPANESE_WORDS)
+        self.assertEqual(
+            decision,
+            {
+                "action": "approve",
+                "message": "メモを作成する\n\n--- 詳細 ---\n\n対象: target/one\nサイズ: 1 byte\n\n--- メモの本文 ---\n\nx",
+                "rule_key": key("demo_thing_create", "target/one"),
+            },
+        )
+
+    def test_without_a_title_or_words_the_card_is_the_english_one(self) -> None:
+        decision = self.answer()
+        self.assertEqual(
+            decision["message"], f"{CREATE}{DETAILS}Target: target/one\nサイズ: 1 byte\n\n--- メモの本文 ---\n\nx"
+        )
+
+    def test_words_are_used_beside_the_registered_title_and_a_title_beside_english_words(self) -> None:
+        self.assertEqual(
+            self.answer(words=JAPANESE_WORDS)["message"],
+            f"{CREATE}\n\n--- 詳細 ---\n\n対象: target/one\nサイズ: 1 byte\n\n--- メモの本文 ---\n\nx",
+        )
+        self.assertEqual(
+            self.answer(title="メモを作成する")["message"],
+            "メモを作成する" + f"{DETAILS}Target: target/one\nサイズ: 1 byte\n\n--- メモの本文 ---\n\nx",
+        )
+
+    def test_a_bad_title_is_the_registered_one_and_changes_nothing_else(self) -> None:
+        for title in (None, "", "  ", 3, ["t"], {"t": 1}):
+            with self.subTest(title=title):
+                decision = self.answer(title=title, words=JAPANESE_WORDS)
+                self.assertEqual(
+                    decision["message"],
+                    f"{CREATE}\n\n--- 詳細 ---\n\n対象: target/one\nサイズ: 1 byte\n\n--- メモの本文 ---\n\nx",
+                )
+                self.assertEqual(decision["rule_key"], key("demo_thing_create", "target/one"))
+
+    def test_bad_words_are_the_english_ones_and_change_neither_the_title_nor_the_description_nor_the_resources(self) -> None:
+        good = JAPANESE_WORDS
+        for words in (
+            "words",
+            [],
+            {},
+            {"details": "詳細", "target": "対象"},
+            {"target": "対象", "more": good["more"]},
+            {"details": "詳細", "more": good["more"]},
+            {**good, "details": ""},
+            {**good, "target": " "},
+            {**good, "more": ""},
+            {**good, "details": 3},
+            {**good, "more": "（ほか 件）"},
+            {**good, "more": "{count} {count}"},
+            {**good, "more": "{count} {x}"},
+            {**good, "more": "{count} }"},
+            {**good, "more": ["{count}"]},
+        ):
+            with self.subTest(words=words):
+                decision = self.answer(title="メモを作成する", words=words)
+                self.assertEqual(
+                    decision["message"],
+                    "メモを作成する" + f"{DETAILS}Target: target/one\nサイズ: 1 byte\n\n--- メモの本文 ---\n\nx",
+                )
+                self.assertEqual(decision["rule_key"], key("demo_thing_create", "target/one"))
+
+    def test_words_and_title_survive_resources_that_cannot_be_told(self) -> None:
+        decision = self.answer(resources=[], title="メモを作成する", words=JAPANESE_WORDS)
+        self.assertRegex(decision["rule_key"], r":once-[0-9a-f]{32}$")
+        self.assertEqual(decision["message"], "メモを作成する\n\n--- 詳細 ---\n\nサイズ: 1 byte\n\n--- メモの本文 ---\n\nx")
+
+    def test_the_card_that_falls_back_keeps_the_title_and_the_words(self) -> None:
+        self.reply(
+            "target demo_thing_create",
+            stdout=json.dumps(
+                {
+                    "resources": ["target/one"],
+                    "title": "メモを作成する",
+                    "words": JAPANESE_WORDS,
+                    "description": {"facts": [{"label": "a", "value": "b"}]},
+                },
+                ensure_ascii=False,
+            ),
+        )
+        hook = self.register().hooks[0][1]
+        build = approval.card.build_message
+
+        def failing_with_a_description(*args: Any) -> str:
+            if args[2] is not None:
+                raise RuntimeError("boom")
+            return build(*args)
+
+        with mock.patch.object(approval.card, "build_message", side_effect=failing_with_a_description):
+            decision = hook(tool_name="demo_thing_create", args={})
+        self.assertEqual(decision["message"], "メモを作成する\n\n--- 詳細 ---\n\n対象: target/one")
+        with mock.patch.object(approval.card, "build_message", side_effect=RuntimeError("boom")):
+            decision = hook(tool_name="demo_thing_create", args={})
+        self.assertEqual(decision["message"], "メモを作成する")
+
+    def test_a_failed_target_is_the_registered_title_in_english(self) -> None:
+        self.reply("target demo_thing_create", code=1, stdout=json.dumps({"title": "メモを作成する", "words": JAPANESE_WORDS}))
+        decision = self.register().hooks[0][1](tool_name="demo_thing_create", args={})
+        self.assertEqual(decision["message"], CREATE)
+
+
+class DisplayLanguageTest(unittest.TestCase):
+    def hermes_says(self, get_language: Any) -> Any:
+        """Put an ``agent.i18n`` whose ``get_language`` is ``get_language`` where ``import`` finds it."""
+        i18n = types.ModuleType("agent.i18n")
+        i18n.get_language = get_language
+        agent = types.ModuleType("agent")
+        agent.i18n = i18n
+        return mock.patch.dict(sys.modules, {"agent": agent, "agent.i18n": i18n})
+
+    def test_it_is_the_display_language_of_hermes(self) -> None:
+        with self.hermes_says(lambda: "ja"):
+            self.assertEqual(approval.display_language(), "ja")
+        with self.hermes_says(lambda: " zh-Hans "):
+            self.assertEqual(approval.display_language(), "zh-Hans")
+
+    def test_it_knows_nothing_without_hermes_or_when_hermes_fails_or_answers_junk(self) -> None:
+        def failing() -> str:
+            raise RuntimeError("boom")
+
+        with mock.patch.dict(sys.modules, {"agent": None, "agent.i18n": None}):
+            self.assertIsNone(approval.display_language())
+        for get_language in (failing, lambda: None, lambda: "", lambda: "  ", lambda: 3):
+            with self.subTest(get_language=get_language), self.hermes_says(get_language):
+                self.assertIsNone(approval.display_language())
+
+    def test_it_imports_nothing_when_the_module_loads(self) -> None:
+        source = Path(approval.__file__).read_text(encoding="utf-8")
+        self.assertNotRegex(source, r"(?m)^(from|import) agent\b")
 
 
 if __name__ == "__main__":
