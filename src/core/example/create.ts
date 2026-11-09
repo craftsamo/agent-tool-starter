@@ -1,5 +1,5 @@
 import { mkdir, writeFile } from "node:fs/promises"
-import { join } from "node:path"
+import { basename, join } from "node:path"
 import { z } from "zod"
 import { ToolError } from "../errors"
 import { sizeFact } from "../facts"
@@ -20,12 +20,13 @@ const output = z.object({
 export const exampleNoteCreate = defineTool({
   id: "example_note_create",
   title: "Create a note",
+  intent: "About to create a note",
   description: "Create a note in the working tree's notes/ folder. Refuses to overwrite an existing note.",
   toolset: "notes",
   class: "add",
   targets: (args, ctx) => [notePath(ctx.cwd, args.name)],
-  describe: (args) => ({
-    headline: { text: "Create the note {name}", values: { name: args.name } },
+  describe: (args, ctx) => ({
+    headline: { text: "About to create {file}", values: { file: basename(notePath(ctx.cwd, args.name)) } },
     facts: [sizeFact(Buffer.byteLength(args.text, "utf8"))],
     text: { label: "Note text", body: args.text },
   }),
