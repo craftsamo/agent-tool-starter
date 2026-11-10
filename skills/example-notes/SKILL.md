@@ -1,6 +1,8 @@
 ---
 name: example-notes
 description: "Use when reading or writing notes in the working tree's notes/ folder."
+metadata:
+  toolset: notes
 ---
 
 # Notes
