@@ -4,7 +4,7 @@
   "private": true,
   "description": "A starter for tool packages that coding agents call: one implementation delivered to every harness.",
   "author": "craftsamo",
-  "license": "MIT",
+  "license": "LicenseRef-AGPL-3.0-Commons-Clause",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/craftsamo/agent-tool-starter.git"
