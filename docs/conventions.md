@@ -54,6 +54,10 @@ A project made from the starter keeps these rules and adds its own below them.
   may start a tool inside the directory the package is installed in.
   `ToolContext.ownDir` names it; a tool that reads the working tree refuses
   to treat that directory as the caller's, saying so.
+- **The MCP server takes the call's directory from the client.** It uses a
+  directory sent with the call (Codex), else the client's first usable root,
+  else the process's working directory; never inside the install directory.
+  This keeps a server started in its install directory out of the working tree.
 
 ## Results
 

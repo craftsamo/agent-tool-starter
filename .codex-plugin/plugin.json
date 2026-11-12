@@ -15,6 +15,7 @@
       "command": "node",
       "args": ["dist/mcp.js"],
       "cwd": ".",
+      "default_tools_approval_mode": "writes",
       "env_vars": [
         "AGENT_TOOL_STARTER_TOOLSETS",
         "AGENT_TOOL_STARTER_READ_ONLY",
