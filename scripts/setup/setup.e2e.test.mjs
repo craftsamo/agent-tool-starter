@@ -127,6 +127,8 @@ describe("the setup on a clone of the starter", () => {
     expect(read(dir, ".claude-plugin/marketplace.json")).toContain('"name": "acme"')
     expect(read(dir, "LICENSE")).toContain("Copyright (c) 2026 acme")
     expect(read(dir, "README.md")).not.toContain("Using this starter")
+    expect(read(dir, "README.md")).not.toContain("toolset: notes")
+    expect(read(dir, "README.md")).not.toContain("text_length")
     expect(read(dir, STARTER_REFERENCE)).toContain('"repository": "craftsamo/agent-tool-starter"')
     expect(readJson(dir, ".codex-plugin/plugin.json").author).toEqual({ name: "acme", url: "https://github.com/acme" })
     expect(readJson(dir, ".claude-plugin/plugin.json").author).toEqual({ name: "acme", url: "https://github.com/acme" })
@@ -187,6 +189,7 @@ describe("the setup on a clone of the starter", () => {
     expect(read(dir, "src/tools.ts")).toContain("./core/example/read")
     expect(read(dir, "src/project.ts")).toContain('toolsets: ["notes"]')
     expect(read(dir, "README.md")).toContain("### Notes (`notes`)")
+    expect(read(dir, "README.md")).toContain("The example `widget_note_create` bounds `text_length`.")
     expect(read(dir, "README.md")).not.toContain("<!-- example")
   })
 
