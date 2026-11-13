@@ -15,7 +15,14 @@ const UNTOUCHED_FILES = new Set(["pnpm-lock.yaml"])
 
 const GITKEEP = "skills/.gitkeep"
 const HERMES_DIR = `src/hermes/${toSnake(STARTER.name)}_hermes`
-const EXPECTED_FILES = [...SPOT_FILES, "src/project.ts", "src/tools.ts", "plugin.yaml", `${HERMES_DIR}/project.py`]
+const EXPECTED_FILES = [
+  ...SPOT_FILES,
+  "src/project.ts",
+  "src/tools.ts",
+  "src/words.ts",
+  "plugin.yaml",
+  `${HERMES_DIR}/project.py`,
+]
 
 const isUnder = (path, dir) => path.startsWith(`${dir}/`)
 

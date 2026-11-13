@@ -123,8 +123,18 @@ describe("editForExample", () => {
     )
   })
 
-  test("refuses a tools file or a project file that is not the starter's", () => {
+  test("keeps only the shared fact words in src/words.ts", () => {
+    const words = 'import { EXAMPLE_TRANSLATIONS } from "./core/example/words"\n'
+    const { text, count } = editForExample("src/words.ts", words, OPTIONS)
+    expect(text).not.toContain("example")
+    expect(text).toContain("ALL_TRANSLATIONS: Translations = mergeTranslations(FACT_TRANSLATIONS)\n")
+    expect(count).toBe(1)
+    expect(editForExample("src/words.ts", words, { ...OPTIONS, keepExample: true }).text).toBe(words)
+  })
+
+  test("refuses a tools, words or project file that is not the starter's", () => {
     expect(() => editForExample("src/tools.ts", "export const ALL_TOOLS = []\n", OPTIONS)).toThrow(SetupError)
+    expect(() => editForExample("src/words.ts", "export const ALL_TRANSLATIONS = {}\n", OPTIONS)).toThrow(SetupError)
     expect(() => editForExample("src/project.ts", 'toolPrefix: "git"\n', OPTIONS)).toThrow(SetupError)
   })
 })
