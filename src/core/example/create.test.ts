@@ -86,6 +86,15 @@ describe("exampleNoteCreate: targets", () => {
   })
 })
 
+describe("exampleNoteCreate: bounds", () => {
+  test("declares a text length ceiling that measure counts in code points", async () => {
+    expect(Object.keys(exampleNoteCreate.bounds ?? {})).toEqual(["text_length"])
+    expect(exampleNoteCreate.bounds?.text_length?.kind).toBe("max")
+    expect(await exampleNoteCreate.measure?.({ name: "n", text: "a😀é" }, { cwd: workDir })).toEqual({ text_length: 3 })
+    expect(await exampleNoteCreate.measure?.({ name: "n", text: "" }, { cwd: workDir })).toEqual({ text_length: 0 })
+  })
+})
+
 describe("exampleNoteCreate: description", () => {
   test("callDescription names the note, gives the size in bytes and the text under its label", async () => {
     const text = "Café"
