@@ -30,6 +30,8 @@ export const exampleNoteCreate = defineTool({
     facts: [sizeFact(Buffer.byteLength(args.text, "utf8"))],
     text: { label: "Note text", body: args.text },
   }),
+  bounds: { text_length: { kind: "max", description: "The longest note text, in characters" } },
+  measure: (args) => ({ text_length: [...args.text].length }),
   input,
   output,
   async execute(args, ctx) {

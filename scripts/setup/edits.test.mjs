@@ -113,9 +113,10 @@ describe("editForExample", () => {
   })
 
   test("empties the tool list of plugin.yaml and of src/tools.ts", () => {
-    const yaml = "name: x\nprovides_tools:\n  - a_b\n  - a_c\nprovides_hooks:\n  - h\n"
+    const yaml =
+      "name: x\nprovides_tools:\n  - a_b\n  - a_c\n  - widget_grant_create\n  - widget_grant_read\n  - widget_grant_revoke\nprovides_hooks:\n  - h\n"
     expect(editForExample("plugin.yaml", yaml, OPTIONS).text).toBe(
-      "name: x\nprovides_tools: []\nprovides_hooks:\n  - h\n",
+      "name: x\nprovides_tools:\n  - widget_grant_create\n  - widget_grant_read\n  - widget_grant_revoke\nprovides_hooks:\n  - h\n",
     )
     expect(editForExample("src/tools.ts", 'import { a } from "./core/example/a"\n', OPTIONS).text).toContain(
       "ALL_TOOLS: ToolSpec[] = []\n",

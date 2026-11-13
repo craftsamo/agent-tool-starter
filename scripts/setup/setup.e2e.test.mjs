@@ -119,7 +119,9 @@ describe("the setup on a clone of the starter", () => {
     expect(existsSync(join(dir, "scripts/setup"))).toBe(false)
     expect(read(dir, "skills/.gitkeep")).toBe("")
     expect(read(dir, "src/tools.ts")).toContain("export const ALL_TOOLS: ToolSpec[] = []\n")
-    expect(read(dir, "plugin.yaml")).toContain("provides_tools: []\n")
+    expect(read(dir, "plugin.yaml")).toContain(
+      "provides_tools:\n  - widget_grant_create\n  - widget_grant_read\n  - widget_grant_revoke\n",
+    )
     expect(read(dir, "src/project.ts")).toContain('toolPrefix: "widget"')
     expect(read(dir, "src/project.ts")).toContain("toolsets: [] as readonly string[]")
     expect(read(dir, ".claude-plugin/marketplace.json")).toContain('"name": "acme"')

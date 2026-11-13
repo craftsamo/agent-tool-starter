@@ -22,6 +22,7 @@ const TOOL_PREFIX_LINE = new RegExp(`(\\btoolPrefix: )"${STARTER.prefix}"`)
 const SKILL_PREFIX_LINE = new RegExp(`(\\bSKILL_PREFIX = )"${STARTER.prefix}-"`)
 const TOOLSETS_LINES = /(\b(?:toolsets|defaultToolsets): )\[[^\]]*\]( as readonly string\[\])/g
 const PROVIDES_TOOLS_BLOCK = /^provides_tools:.*(?:\n[ \t]+-.*)*$/m
+const GRANT_TOOL_LINE = /^  - [a-z]+_grant_(?:create|read|revoke)$/
 
 /** Replaces `pattern` in `text` through `replacement`; it must match `expected` times, so a changed file is refused. */
 function replaceExactly(path, text, pattern, replacement, expected = 1) {
@@ -47,7 +48,12 @@ function removeExample(path, text) {
   if (path === PROJECT_FILE) {
     return replaceExactly(path, text, TOOLSETS_LINES, (_, key, type) => `${key}[]${type}`, 2)
   }
-  if (path === PLUGIN_YAML) return replaceExactly(path, text, PROVIDES_TOOLS_BLOCK, () => "provides_tools: []")
+  if (path === PLUGIN_YAML) {
+    return replaceExactly(path, text, PROVIDES_TOOLS_BLOCK, (block) => {
+      const grants = block.split("\n").filter((line) => GRANT_TOOL_LINE.test(line))
+      return grants.length > 0 ? `provides_tools:\n${grants.join("\n")}` : "provides_tools: []"
+    })
+  }
   return { text, count: 0 }
 }
 
