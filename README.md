@@ -181,6 +181,22 @@ The plugin runs the Node it found when Hermes started. If a version manager
 removes that version while Hermes runs, a call looks for Node again; when it
 finds none, restart Hermes from a shell where `node` runs.
 
+When the package's writes depend on another Hermes plugin, such as a guard
+that blocks writes no one is there to approve, name it in `require_plugins`.
+Hermes keeps loading this plugin when that one fails to import or register,
+and treats a manifest's `requires_plugins` as advisory. With the setting,
+while a named plugin is not loaded, every write is refused before it is
+approved, even under `--yolo`, `approvals.mode: off` or a remembered answer,
+naming the plugin that is missing. Reads still run.
+
+```yaml
+plugins:
+  entries:
+    agent-tool-starter:
+      settings:
+        require_plugins: [write-guard]
+```
+
 ### Any other MCP host
 
 Add the server to the host's MCP configuration. Flags go in `args`:
@@ -410,17 +426,18 @@ with; see [Settings](#settings) before changing the job's variables.
 Every entry point takes the same settings. A flag wins over its environment
 variable, and an option or setting wins over the variable too.
 
-| Setting         | Flag              | Variable                           | Meaning                                                                                                                                   |
-| --------------- | ----------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `toolsets`      | `--toolsets`      | `AGENT_TOOL_STARTER_TOOLSETS`      | the toolsets that are on, or `all`; default those `src/project.ts` names                                                                  |
-| `read_only`     | `--read-only`     | `AGENT_TOOL_STARTER_READ_ONLY`     | registers no tool that writes; wins over every other setting                                                                              |
-| `unattended`    | `--unattended`    | `AGENT_TOOL_STARTER_UNATTENDED`    | no person can answer: a write runs only under a grant that covers it; off by default                                                      |
-| `grants_dir`    | `--grants-dir`    | `AGENT_TOOL_STARTER_GRANTS_DIR`    | where grants and their use are kept; default `$XDG_STATE_HOME/agent-tool-starter/grants`, else `~/.local/state/agent-tool-starter/grants` |
-| `tools`         | `--tools`         | `AGENT_TOOL_STARTER_TOOLS`         | single tools to add by ID, whatever their toolset                                                                                         |
-| `exclude_tools` | `--exclude-tools` | `AGENT_TOOL_STARTER_EXCLUDE_TOOLS` | single tools to remove by ID; wins over `tools` and `toolsets`                                                                            |
-| `confirm`       | `--confirm`       | `AGENT_TOOL_STARTER_CONFIRM`       | MCP server only: `harness` (default) or `elicitation`, as the conventions say                                                             |
-| `language`      | `--language`      | `AGENT_TOOL_STARTER_LANGUAGE`      | native plugins only: the approval prompt's language, such as `ja`                                                                         |
-| `emoji`         | —                 | —                                  | Hermes only: the emoji shown beside each toolset, by toolset name (`""` for none)                                                         |
+| Setting           | Flag              | Variable                           | Meaning                                                                                                                                   |
+| ----------------- | ----------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `toolsets`        | `--toolsets`      | `AGENT_TOOL_STARTER_TOOLSETS`      | the toolsets that are on, or `all`; default those `src/project.ts` names                                                                  |
+| `read_only`       | `--read-only`     | `AGENT_TOOL_STARTER_READ_ONLY`     | registers no tool that writes; wins over every other setting                                                                              |
+| `unattended`      | `--unattended`    | `AGENT_TOOL_STARTER_UNATTENDED`    | no person can answer: a write runs only under a grant that covers it; off by default                                                      |
+| `grants_dir`      | `--grants-dir`    | `AGENT_TOOL_STARTER_GRANTS_DIR`    | where grants and their use are kept; default `$XDG_STATE_HOME/agent-tool-starter/grants`, else `~/.local/state/agent-tool-starter/grants` |
+| `tools`           | `--tools`         | `AGENT_TOOL_STARTER_TOOLS`         | single tools to add by ID, whatever their toolset                                                                                         |
+| `exclude_tools`   | `--exclude-tools` | `AGENT_TOOL_STARTER_EXCLUDE_TOOLS` | single tools to remove by ID; wins over `tools` and `toolsets`                                                                            |
+| `confirm`         | `--confirm`       | `AGENT_TOOL_STARTER_CONFIRM`       | MCP server only: `harness` (default) or `elicitation`, as the conventions say                                                             |
+| `language`        | `--language`      | `AGENT_TOOL_STARTER_LANGUAGE`      | native plugins only: the approval prompt's language, such as `ja`                                                                         |
+| `emoji`           | —                 | —                                  | Hermes only: the emoji shown beside each toolset, by toolset name (`""` for none)                                                         |
+| `require_plugins` | —                 | —                                  | Hermes only: the plugins that must be loaded; while one is not, every write is refused before it is approved                              |
 
 `AGENT_TOOL_STARTER_GRANT_KEY` is a variable only, never a flag or a plugin
 option. Use at least 32 characters, for example from `openssl rand -hex 32`,
