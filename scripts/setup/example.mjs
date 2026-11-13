@@ -8,6 +8,7 @@ export const EXAMPLE_SKILL_DIR = `skills/${STARTER.prefix}-notes`
 export const EXAMPLE_DIRS = ["src/core/example", EXAMPLE_SKILL_DIR]
 
 const TOOLS_FILE = "src/tools.ts"
+const WORDS_FILE = "src/words.ts"
 const PLUGIN_YAML = "plugin.yaml"
 const PROJECT_FILE = "src/project.ts"
 const HERMES_PROJECT_FILE = /^src\/hermes\/[^/]+\/project\.py$/
@@ -17,6 +18,19 @@ const EMPTY_TOOLS_FILE = `import type { ToolSpec } from "./core"
 /** Every tool spec of the package; entry points register their tools from this list. */
 export const ALL_TOOLS: ToolSpec[] = []
 `
+
+const FACT_WORDS_FILE = `import { mergeTranslations, type Translations } from "./core"
+import { FACT_TRANSLATIONS } from "./core/facts"
+
+/** The translations of every tool's words, per language, which the native plugins use in their approval prompts. */
+export const ALL_TRANSLATIONS: Translations = mergeTranslations(FACT_TRANSLATIONS)
+`
+
+/** The files that import from the example, each with its text once the example is gone and what it imports. */
+const REWRITTEN_FILES = new Map([
+  [TOOLS_FILE, { text: EMPTY_TOOLS_FILE, imports: "the example tools" }],
+  [WORDS_FILE, { text: FACT_WORDS_FILE, imports: "the example tools' words" }],
+])
 
 const TOOL_PREFIX_LINE = new RegExp(`(\\btoolPrefix: )"${STARTER.prefix}"`)
 const SKILL_PREFIX_LINE = new RegExp(`(\\bSKILL_PREFIX = )"${STARTER.prefix}-"`)
@@ -39,11 +53,12 @@ function replaceExactly(path, text, pattern, replacement, expected = 1) {
 
 /** Takes the example tools out of the files that list them. */
 function removeExample(path, text) {
-  if (path === TOOLS_FILE) {
+  const rewritten = REWRITTEN_FILES.get(path)
+  if (rewritten) {
     if (!text.includes("./core/example/")) {
-      throw new SetupError(`${TOOLS_FILE} does not import the example tools; it was changed after the starter.`)
+      throw new SetupError(`${path} does not import ${rewritten.imports}; it was changed after the starter.`)
     }
-    return { text: EMPTY_TOOLS_FILE, count: 1 }
+    return { text: rewritten.text, count: 1 }
   }
   if (path === PROJECT_FILE) {
     return replaceExactly(path, text, TOOLSETS_LINES, (_, key, type) => `${key}[]${type}`, 2)

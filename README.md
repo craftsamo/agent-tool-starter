@@ -200,7 +200,7 @@ Add the server to the host's MCP configuration. Flags go in `args`:
 
 Each toolset comes with a skill that tells an agent how to use its tools. A
 skill names its toolset under `metadata` in its frontmatter
-(`metadata: { toolset: notes }`, written as a block). OpenCode V2 and Hermes
+(`metadata: { toolset: <name> }`, written as a block). OpenCode V2 and Hermes
 register it only when the settings register at least one of that toolset's
 tools, so a profile with the toolset off, or with all its tools removed, does
 not see it; a skill without a toolset is always registered. Claude Code,
@@ -242,7 +242,12 @@ Every write tool can be granted for its targets, calls per hour and expiry.
 A tool adds what a grant can also limit by declaring `bounds` and giving
 `measure(args, context)` in its spec; see the
 [conventions](docs/conventions.md#writes-no-one-is-there-to-approve).
+
+<!-- example -->
+
 The example `example_note_create` bounds `text_length`.
+
+<!-- /example -->
 
 ## Adding a tool
 
