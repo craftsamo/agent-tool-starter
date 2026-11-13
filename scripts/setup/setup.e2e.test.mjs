@@ -1,6 +1,16 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test"
 import { spawnSync } from "node:child_process"
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs"
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join, relative } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -22,6 +32,11 @@ const LEFTOVERS = [
 
 /** The file the setup writes after the renames, which names the starter on purpose. */
 const STARTER_REFERENCE = "opencode.jsonc"
+
+const TSC = join(REPO, "node_modules/.bin/tsc")
+
+/** The TypeScript projects `pnpm run typecheck` checks. */
+const TS_CONFIGS = ["tsconfig.json", "tsconfig.core.json"]
 
 let workspace
 let template
@@ -79,6 +94,15 @@ function expectNoLeftovers(dir, leftovers = LEFTOVERS) {
       .map((leftover) => `${relative(dir, path)}: ${leftover}`)
   })
   expect(hits).toEqual([])
+}
+
+/** What tsc reports for each project of a set-up tree, checked with this repository's dependencies. */
+function typeErrors(dir) {
+  symlinkSync(join(REPO, "node_modules"), join(dir, "node_modules"), "dir")
+  return TS_CONFIGS.flatMap((config) => {
+    const result = run(TSC, ["-p", config], dir)
+    return result.status === 0 ? [] : [`${config}: ${result.stdout}${result.stderr}`]
+  })
 }
 
 beforeAll(() => {
@@ -191,6 +215,15 @@ describe("the setup on a clone of the starter", () => {
     expect(read(dir, "README.md")).toContain("### Notes (`notes`)")
     expect(read(dir, "README.md")).toContain("The example `widget_note_create` bounds `text_length`.")
     expect(read(dir, "README.md")).not.toContain("<!-- example")
+  })
+
+  test.each([
+    { name: "typecheck", options: [], label: "without the example" },
+    { name: "typecheck-keep", options: ["--keep-example"], label: "with --keep-example" },
+  ])("leaves a tree that typechecks $label", ({ name, options }) => {
+    const dir = checkout(name)
+    expect(setup(dir, ...REQUIRED, ...options, "--yes").status).toBe(0)
+    expect(typeErrors(dir)).toEqual([])
   })
 
   test("--dry-run shows the plan and writes nothing", () => {
