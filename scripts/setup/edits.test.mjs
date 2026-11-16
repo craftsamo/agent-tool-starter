@@ -6,6 +6,7 @@ import { editSpots } from "./spots.mjs"
 import { resetVersion } from "./version.mjs"
 
 const OPTIONS = {
+  name: "widget-tools",
   prefix: "widget",
   owner: "acme",
   author: 'A "B"',
@@ -27,18 +28,19 @@ describe("editSpots", () => {
   })
 
   test("renames owner object, description and marketplace in claude marketplace", () => {
-    const marketplace = `{\n  "name": "craftsamo",\n  "description": "Plugins by craftsamo.",\n  "owner": {\n    "name": "craftsamo",\n    "url": "https://github.com/craftsamo"\n  }\n}\n`
+    const marketplace = `{\n  "name": "widget-tools",\n  "description": "Plugins by craftsamo.",\n  "owner": {\n    "name": "craftsamo",\n    "url": "https://github.com/craftsamo"\n  },\n  "plugins": [\n    {\n      "name": "widget-tools"\n    }\n  ]\n}\n`
     const { text, count } = editSpots(".claude-plugin/marketplace.json", marketplace, OPTIONS)
     expect(count).toBe(3)
     expect(JSON.parse(text)).toEqual({
       name: "acme-market",
       description: "Plugins by Acme Inc.",
       owner: { name: "Acme Inc", url: "https://github.com/acme" },
+      plugins: [{ name: "widget-tools" }],
     })
   })
 
   test("renames the marketplace name and sets displayName to publisher in agents marketplace", () => {
-    const marketplace = `{\n  "name": "craftsamo",\n  "interface": {\n    "displayName": "craftsamo"\n  },\n  "plugins": [{ "name": "x" }]\n}\n`
+    const marketplace = `{\n  "name": "widget-tools",\n  "interface": {\n    "displayName": "craftsamo"\n  },\n  "plugins": [{ "name": "x" }]\n}\n`
     const { text } = editSpots(".agents/plugins/marketplace.json", marketplace, OPTIONS)
     expect(JSON.parse(text).name).toBe("acme-market")
     expect(JSON.parse(text).interface.displayName).toBe("Acme Inc")
@@ -51,6 +53,11 @@ describe("editSpots", () => {
   test("leaves other files alone and refuses a file that lost its spot", () => {
     expect(editSpots("README.md", "craftsamo", OPTIONS)).toEqual({ text: "craftsamo", count: 0 })
     expect(() => editSpots("LICENSE", "Copyright (c) 2026 Someone\n", OPTIONS)).toThrow(SetupError)
+  })
+
+  test("refuses a marketplace whose name is not the package name", () => {
+    const marketplace = `{\n  "name": "craftsamo",\n  "interface": {\n    "displayName": "craftsamo"\n  }\n}\n`
+    expect(() => editSpots(".agents/plugins/marketplace.json", marketplace, OPTIONS)).toThrow(SetupError)
   })
 })
 

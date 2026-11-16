@@ -129,14 +129,14 @@ rm -rf package craftsamo-agent-tool-starter-<version>.tgz
 
 ```sh
 claude plugin marketplace add craftsamo/agent-tool-starter#v<version>
-claude plugin install agent-tool-starter@craftsamo
+claude plugin install agent-tool-starter@agent-tool-starter
 ```
 
 ### Codex
 
 ```sh
 codex plugin marketplace add craftsamo/agent-tool-starter --ref v<version>
-codex plugin add agent-tool-starter@craftsamo
+codex plugin add agent-tool-starter@agent-tool-starter
 ```
 
 Codex turns `-` into `_` in server names, so it shows the tools as

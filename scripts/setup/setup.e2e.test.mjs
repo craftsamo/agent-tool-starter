@@ -151,6 +151,8 @@ describe("the setup on a clone of the starter", () => {
     expect(readJson(dir, ".claude-plugin/marketplace.json").name).toBe("widget-tools")
     expect(readJson(dir, ".agents/plugins/marketplace.json").name).toBe("widget-tools")
     expect(read(dir, "LICENSE")).toContain("Copyright (c) 2026 acme")
+    expect(read(dir, "README.md")).toContain("claude plugin install widget-tools@widget-tools")
+    expect(read(dir, "README.md")).toContain("codex plugin add widget-tools@widget-tools")
     expect(read(dir, "README.md")).not.toContain("Using this starter")
     expect(read(dir, "README.md")).not.toContain("toolset: notes")
     expect(read(dir, "README.md")).not.toContain("text_length")
@@ -190,12 +192,21 @@ describe("the setup on a clone of the starter", () => {
       "--publisher",
       "Acme Inc",
       "--keep-example",
+      "--marketplace",
+      "acme-market",
       "--yes",
     )
     expect(result.stderr).not.toContain("Error")
     expect(result.status).toBe(0)
 
     expectNoLeftovers(dir)
+    for (const file of [".claude-plugin/marketplace.json", ".agents/plugins/marketplace.json"]) {
+      const manifest = readJson(dir, file)
+      expect(manifest.name).toBe("acme-market")
+      expect(manifest.plugins[0].name).toBe("widget-tools")
+    }
+    expect(read(dir, "README.md")).toContain("claude plugin install widget-tools@acme-market")
+    expect(read(dir, "README.md")).toContain("codex plugin add widget-tools@acme-market")
     expect(readJson(dir, ".codex-plugin/plugin.json").author).toEqual({
       name: "acme",
       url: "https://github.com/someone",

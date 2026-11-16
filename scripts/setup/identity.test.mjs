@@ -30,7 +30,7 @@ describe("the replacement table", () => {
     ["io.github.craftsamo/agent-tool-starter", "io.github.Acme/widget-tools"],
     ["https://github.com/craftsamo/agent-tool-starter#readme", "https://github.com/Acme/widget-tools#readme"],
     ["craftsamo-agent-tool-starter-1.0.0.tgz", "acme-widget-tools-1.0.0.tgz"],
-    ["agent-tool-starter@craftsamo", "widget-tools@acme-market"],
+    ["agent-tool-starter@agent-tool-starter", "widget-tools@acme-market"],
     ["AGENT_TOOL_STARTER_READ_ONLY", "WIDGET_TOOLS_READ_ONLY"],
     ["mcp__agent_tool_starter__example_*", "mcp__widget_tools__widget_*"],
     ["agent-tool-starter-cli", "widget-tools-cli"],
