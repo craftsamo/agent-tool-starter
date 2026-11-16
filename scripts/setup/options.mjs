@@ -36,7 +36,7 @@ Options:
   --name <kebab-case>    the package, plugin, server and program name (default: the origin repository's name)
   --owner <login>        the GitHub owner (default: the origin repository's owner)
   --scope <@scope>       the npm scope (default: @<owner>)
-  --marketplace <name>   the plugin marketplace name (default: <owner>)
+  --marketplace <name>   the plugin marketplace name (default: the package name)
   --author <name>        the author in the manifests and the license holder (default: <owner>)
   --author-url <url>     the author URL in the plugin manifests (default: https://github.com/<owner>)
   --publisher <name>     the marketplace publisher (default: <author>)
@@ -109,7 +109,7 @@ export function resolveOptions(parsed, origin) {
   const authorUrl = parsed.authorUrl ?? `https://github.com/${owner}`
   const publisher = parsed.publisher ?? author
   const scope = parsed.scope ?? `@${owner.toLowerCase()}`
-  const marketplace = parsed.marketplace ?? owner
+  const marketplace = parsed.marketplace ?? name
 
   check(parsed.prefix, PREFIX_PATTERN, "--prefix", "one lowercase word")
   check(name, NAME_PATTERN, "--name", "kebab-case (letters, digits and single hyphens, starting with a letter)")
