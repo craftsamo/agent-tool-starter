@@ -1,5 +1,6 @@
 import { DESCRIPTION_LIMIT } from "../server-json.mjs"
 import { usageError } from "./errors.mjs"
+import { reservedBy } from "./marketplace-names.mjs"
 
 /** The options that take a value, mapped to the key they set. */
 const VALUE_OPTIONS = {
@@ -21,7 +22,7 @@ const PREFIX_PATTERN = /^[a-z]+$/
 const NAME_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
 const OWNER_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/
 const SCOPE_PATTERN = /^@[a-z0-9][a-z0-9._-]*$/
-const MARKETPLACE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
+const MARKETPLACE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]*$/
 const AUTHOR_URL_PATTERN = /^https:\/\/\S+$/
 const ORIGIN_PATTERN =
   /^(?:https?:\/\/(?:[^@/]+@)?|ssh:\/\/(?:[^@/]+@)?|git@)github\.com[/:]([^/]+)\/([^/]+?)(?:\.git)?\/?$/i
@@ -115,7 +116,19 @@ export function resolveOptions(parsed, origin) {
   check(name, NAME_PATTERN, "--name", "kebab-case (letters, digits and single hyphens, starting with a letter)")
   check(owner, OWNER_PATTERN, "--owner", "a GitHub login")
   check(scope, SCOPE_PATTERN, "--scope", "an npm scope such as @acme")
-  check(marketplace, MARKETPLACE_PATTERN, "--marketplace", "letters, digits, dots, hyphens and underscores")
+  check(
+    marketplace,
+    MARKETPLACE_PATTERN,
+    "--marketplace",
+    "letters, digits, hyphens and underscores, starting with a letter or digit",
+  )
+  const harness = reservedBy(marketplace)
+  if (harness) {
+    const source = parsed.marketplace === undefined ? " (the default, the package name)" : ""
+    throw usageError(
+      `--marketplace ${JSON.stringify(marketplace)}${source} is a name ${harness} reserves; pass another --marketplace.`,
+    )
+  }
   check(authorUrl, AUTHOR_URL_PATTERN, "--author-url", "an https:// URL on one line")
   if (/[\r\n]/.test(description)) throw usageError("--description must be one line.")
   if (description.length > DESCRIPTION_LIMIT) {
