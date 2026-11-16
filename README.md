@@ -41,13 +41,17 @@ renamed in one step.
 | `--name`         | the `origin` repository's name  | the package, plugin, server and program name, in kebab-case |
 | `--owner`        | the `origin` repository's owner | the GitHub owner the URLs and the registry name use         |
 | `--scope`        | `@<owner>`                      | the npm scope                                               |
-| `--marketplace`  | `<owner>`                       | the plugin marketplace name of Claude Code and Codex        |
+| `--marketplace`  | `<name>`                        | the plugin marketplace name of Claude Code and Codex        |
 | `--author`       | `<owner>`                       | the author in the manifests and the license holder          |
 | `--author-url`   | `https://github.com/<owner>`    | the author URL in the plugin manifests                      |
 | `--publisher`    | `<author>`                      | the marketplace publisher in the plugin catalogs            |
 | `--keep-example` |                                 | keep the example notes tools, renamed to the prefix         |
 | `--dry-run`      |                                 | show the changes without writing                            |
 | `--yes`          |                                 | write without asking                                        |
+
+Claude Code and Codex tell marketplaces apart by name, so each package needs
+its own `--marketplace` name, even beside another package of the same owner;
+the default, the package name, gives it one.
 
 The setup removes the example notes tools unless `--keep-example` is given,
 drops `"private": true` so the package can be published, starts its version
@@ -125,14 +129,14 @@ rm -rf package craftsamo-agent-tool-starter-<version>.tgz
 
 ```sh
 claude plugin marketplace add craftsamo/agent-tool-starter#v<version>
-claude plugin install agent-tool-starter@craftsamo
+claude plugin install agent-tool-starter@agent-tool-starter
 ```
 
 ### Codex
 
 ```sh
 codex plugin marketplace add craftsamo/agent-tool-starter --ref v<version>
-codex plugin add agent-tool-starter@craftsamo
+codex plugin add agent-tool-starter@agent-tool-starter
 ```
 
 Codex turns `-` into `_` in server names, so it shows the tools as

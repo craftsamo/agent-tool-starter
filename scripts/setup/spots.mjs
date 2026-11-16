@@ -1,4 +1,5 @@
 import { SetupError } from "./errors.mjs"
+import { escapeRegExp } from "./identity.mjs"
 
 /**
  * `"name": "craftsamo", "url": "https://github.com/craftsamo"` inside an `author` object, as the
@@ -23,13 +24,22 @@ const marketplaceOwner = [
   (o, name, url) => `${name}${json(o.publisher)}${url}${json(`https://github.com/${o.owner}`)}`,
 ]
 
-const marketplaceName = [/^(  "name": )"craftsamo"/gm, (o, key) => `${key}${json(o.marketplace)}`]
+/**
+ * The marketplace's own top-level `"name"`. The starter's marketplace is named after the package, so the identity
+ * table has already turned it into the package name (`options.name`); this turns that into `--marketplace`. The
+ * 2-space anchor leaves the plugin entries (deeper indentation) alone.
+ */
+const marketplaceName = [
+  (o) => new RegExp(`^(  "name": )${escapeRegExp(json(o.name))}`, "gm"),
+  (o, key) => `${key}${json(o.marketplace)}`,
+]
 
 /**
  * The places where the starter's own marketplace name, author or owner stands, by file: each `[pattern, build]`
- * must match, and `build(options, ...groups)` gives its replacement. These are edited exactly where they are,
- * never by replacing `craftsamo` everywhere: that is also the `@craftsamo/repo-kit` dependency and the
- * `craftsamo/repo-kit` workflows, which stay.
+ * must match, and `build(options, ...groups)` gives its replacement. A pattern is a RegExp, or a function of the
+ * options that gives one. The marketplace name is the package name already (see `marketplaceName`); the rest is still
+ * the starter's `craftsamo`. These are edited exactly where they are, never by replacing `craftsamo` everywhere: that
+ * is also the `@craftsamo/repo-kit` dependency and the `craftsamo/repo-kit` workflows, which stay.
  */
 const SPOTS = {
   ".codex-plugin/plugin.json": [authorPerson],
@@ -55,12 +65,13 @@ export const SPOT_FILES = Object.keys(SPOTS)
 export function editSpots(path, text, options) {
   let count = 0
   for (const [pattern, build] of SPOTS[path] ?? []) {
+    const resolved = typeof pattern === "function" ? pattern(options) : pattern
     let found = 0
-    text = text.replace(pattern, (_, ...groups) => {
+    text = text.replace(resolved, (_, ...groups) => {
       found++
       return build(options, ...groups)
     })
-    if (found === 0) throw new SetupError(`${path} has no ${pattern}; the setup has probably run already.`)
+    if (found === 0) throw new SetupError(`${path} has no ${resolved}; the setup has probably run already.`)
     count += found
   }
   return { text, count }

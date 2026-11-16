@@ -88,7 +88,7 @@ describe("resolveOptions", () => {
       owner: "Acme",
       repo: "widget-tools",
       scope: "@acme",
-      marketplace: "Acme",
+      marketplace: "widget-tools",
       author: "Acme",
       authorUrl: "https://github.com/Acme",
       publisher: "Acme",

@@ -12,7 +12,8 @@ export const toSnake = (name) => name.replaceAll("-", "_")
 /** A name in SCREAMING_SNAKE_CASE: `widget-tools` is `WIDGET_TOOLS`. */
 export const toScreamingSnake = (name) => toSnake(name).toUpperCase()
 
-const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+/** `text` as a regular expression source that matches it literally. */
+export const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 
 /**
  * A tool ID or permission glob starting with the starter's prefix (`example_note_read`, `example_*`),
@@ -38,7 +39,7 @@ export function deriveIdentity(options, starterDescription) {
     [`io.github.${STARTER.owner}/${STARTER.name}`, `io.github.${owner}/${repo}`],
     [`${STARTER.owner}/${STARTER.name}`, `${owner}/${repo}`],
     [`${STARTER.owner}-${STARTER.name}`, `${scope.slice(1)}-${name}`],
-    [`${STARTER.name}@${STARTER.owner}`, `${name}@${marketplace}`],
+    [`${STARTER.name}@${STARTER.name}`, `${name}@${marketplace}`],
     [toScreamingSnake(STARTER.name), toScreamingSnake(name)],
     [toSnake(STARTER.name), toSnake(name)],
     [STARTER.name, name],
