@@ -51,7 +51,10 @@ renamed in one step.
 
 Claude Code and Codex tell marketplaces apart by name, so each package needs
 its own `--marketplace` name, even beside another package of the same owner;
-the default, the package name, gives it one.
+the default, the package name, gives it one. The setup allows only letters,
+digits, hyphens and underscores, which both accept, and refuses the names either
+one reserves. Claude Code may also refuse a name containing `claude` or
+`anthropic`, as one that impersonates its own marketplaces.
 
 The setup removes the example notes tools unless `--keep-example` is given,
 drops `"private": true` so the package can be published, starts its version

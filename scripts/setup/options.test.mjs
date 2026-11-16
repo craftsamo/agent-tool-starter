@@ -143,6 +143,14 @@ describe("resolveOptions", () => {
     [{ scope: "acme" }, "--scope"],
     [{ scope: "@Acme" }, "--scope"],
     [{ marketplace: "a b" }, "--marketplace"],
+    [{ marketplace: "a.b" }, "--marketplace"],
+    [{ marketplace: "_a" }, "--marketplace"],
+    [{ marketplace: "agent-skills" }, "Claude Code"],
+    [{ marketplace: "Healthcare" }, "Claude Code"],
+    [{ marketplace: "claudeai-tools" }, "Claude Code"],
+    [{ marketplace: "toString" }, "Claude Code"],
+    [{ marketplace: "openai-curated" }, "Codex"],
+    [{ name: "agent-skills" }, "the default, the package name"],
     [{ description: "two\nlines" }, "--description"],
     [{ description: "x".repeat(DESCRIPTION_LIMIT + 1) }, "--description"],
     [{ author: "two\nlines" }, "--author"],
@@ -155,6 +163,13 @@ describe("resolveOptions", () => {
     [{ publisher: "   " }, "--publisher"],
   ])("refuses %j", (invalid, option) => {
     expect(usageMessage(() => resolveOptions({ ...REQUIRED, ...invalid }, ORIGIN))).toContain(option)
+  })
+
+  test("accepts underscores and digits in a marketplace, and a name that only contains a reserved word", () => {
+    expect(resolveOptions({ ...REQUIRED, marketplace: "acme_tools-2" }, ORIGIN).marketplace).toBe("acme_tools-2")
+    expect(resolveOptions({ ...REQUIRED, marketplace: "my-healthcare-tools" }, ORIGIN).marketplace).toBe(
+      "my-healthcare-tools",
+    )
   })
 
   test("accepts a description of exactly the registry's limit", () => {
