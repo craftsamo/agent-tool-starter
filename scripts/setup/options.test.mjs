@@ -136,6 +136,7 @@ describe("resolveOptions", () => {
   test.each([
     [{ prefix: "Widget" }, "--prefix"],
     [{ prefix: "wid_get" }, "--prefix"],
+    [{ prefix: "3d" }, "--prefix"],
     [{ name: "Widget" }, "--name"],
     [{ name: "widget--tools" }, "--name"],
     [{ name: "1widget" }, "--name"],
@@ -163,6 +164,10 @@ describe("resolveOptions", () => {
     [{ publisher: "   " }, "--publisher"],
   ])("refuses %j", (invalid, option) => {
     expect(usageMessage(() => resolveOptions({ ...REQUIRED, ...invalid }, ORIGIN))).toContain(option)
+  })
+
+  test("accepts digits after the first letter in a prefix", () => {
+    expect(resolveOptions({ ...REQUIRED, prefix: "web3" }, ORIGIN).prefix).toBe("web3")
   })
 
   test("accepts underscores and digits in a marketplace, and a name that only contains a reserved word", () => {
