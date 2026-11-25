@@ -119,11 +119,10 @@ describe("editForExample", () => {
     )
   })
 
-  test("empties the tool list of plugin.yaml and of src/tools.ts", () => {
-    const yaml =
-      "name: x\nprovides_tools:\n  - a_b\n  - a_c\n  - widget_grant_create\n  - widget_grant_read\n  - widget_grant_revoke\nprovides_hooks:\n  - h\n"
-    expect(editForExample("plugin.yaml", yaml, OPTIONS).text).toBe(
-      "name: x\nprovides_tools:\n  - widget_grant_create\n  - widget_grant_read\n  - widget_grant_revoke\nprovides_hooks:\n  - h\n",
+  test.each(["widget", "web3"])("empties the example tool lists, keeping grant tools with prefix %s", (prefix) => {
+    const yaml = `name: x\nprovides_tools:\n  - a_b\n  - a_c\n  - ${prefix}_grant_create\n  - ${prefix}_grant_read\n  - ${prefix}_grant_revoke\nprovides_hooks:\n  - h\n`
+    expect(editForExample("plugin.yaml", yaml, { ...OPTIONS, prefix }).text).toBe(
+      `name: x\nprovides_tools:\n  - ${prefix}_grant_create\n  - ${prefix}_grant_read\n  - ${prefix}_grant_revoke\nprovides_hooks:\n  - h\n`,
     )
     expect(editForExample("src/tools.ts", 'import { a } from "./core/example/a"\n', OPTIONS).text).toContain(
       "ALL_TOOLS: ToolSpec[] = []\n",

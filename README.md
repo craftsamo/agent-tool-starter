@@ -36,7 +36,7 @@ renamed in one step.
 
 | Option           | Default                         | Meaning                                                     |
 | ---------------- | ------------------------------- | ----------------------------------------------------------- |
-| `--prefix`       | (required)                      | the tool ID prefix, one lowercase word: `git` gives `git_*` |
+| `--prefix`       | (required)                      | the tool ID prefix, `[a-z][a-z0-9]*`: `git` gives `git_*`   |
 | `--description`  | (required)                      | the one-line description of the package and its plugins     |
 | `--name`         | the `origin` repository's name  | the package, plugin, server and program name, in kebab-case |
 | `--owner`        | the `origin` repository's owner | the GitHub owner the URLs and the registry name use         |

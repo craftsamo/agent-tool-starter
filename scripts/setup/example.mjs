@@ -36,7 +36,7 @@ const TOOL_PREFIX_LINE = new RegExp(`(\\btoolPrefix: )"${STARTER.prefix}"`)
 const SKILL_PREFIX_LINE = new RegExp(`(\\bSKILL_PREFIX = )"${STARTER.prefix}-"`)
 const TOOLSETS_LINES = /(\b(?:toolsets|defaultToolsets): )\[[^\]]*\]( as readonly string\[\])/g
 const PROVIDES_TOOLS_BLOCK = /^provides_tools:.*(?:\n[ \t]+-.*)*$/m
-const GRANT_TOOL_LINE = /^  - [a-z]+_grant_(?:create|read|revoke)$/
+const GRANT_TOOL_LINE = /^  - [a-z][a-z0-9]*_grant_(?:create|read|revoke)$/
 
 /** Replaces `pattern` in `text` through `replacement`; it must match `expected` times, so a changed file is refused. */
 function replaceExactly(path, text, pattern, replacement, expected = 1) {

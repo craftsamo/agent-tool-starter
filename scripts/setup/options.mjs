@@ -18,7 +18,7 @@ const VALUE_OPTIONS = {
 /** The options that stand alone, mapped to the key they set. */
 const FLAG_OPTIONS = { "keep-example": "keepExample", "dry-run": "dryRun", yes: "yes", help: "help" }
 
-const PREFIX_PATTERN = /^[a-z]+$/
+const PREFIX_PATTERN = /^[a-z][a-z0-9]*$/
 const NAME_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
 const OWNER_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/
 const SCOPE_PATTERN = /^@[a-z0-9][a-z0-9._-]*$/
@@ -32,7 +32,7 @@ export const HELP = `Usage: pnpm run setup -- --prefix <prefix> --description "<
 Renames the starter to your package, once. Shows every change and asks before writing.
 
 Options:
-  --prefix <word>        the tool ID prefix, one lowercase word (required)
+  --prefix <word>        the tool ID prefix, lowercase letters and digits, starting with a letter (required)
   --description <text>   the one-line description, at most ${DESCRIPTION_LIMIT} characters (required)
   --name <kebab-case>    the package, plugin, server and program name (default: the origin repository's name)
   --owner <login>        the GitHub owner (default: the origin repository's owner)
@@ -112,7 +112,7 @@ export function resolveOptions(parsed, origin) {
   const scope = parsed.scope ?? `@${owner.toLowerCase()}`
   const marketplace = parsed.marketplace ?? name
 
-  check(parsed.prefix, PREFIX_PATTERN, "--prefix", "one lowercase word")
+  check(parsed.prefix, PREFIX_PATTERN, "--prefix", "a lowercase word of letters and digits, starting with a letter")
   check(name, NAME_PATTERN, "--name", "kebab-case (letters, digits and single hyphens, starting with a letter)")
   check(owner, OWNER_PATTERN, "--owner", "a GitHub login")
   check(scope, SCOPE_PATTERN, "--scope", "an npm scope such as @acme")
